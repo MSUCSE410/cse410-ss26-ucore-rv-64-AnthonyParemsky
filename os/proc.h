@@ -2,8 +2,10 @@
 #define PROC_H
 
 #include "types.h"
+#include "stddef.h"
 
 #define NPROC (16)
+#define MAX_SYSCALL_NUM 500
 
 // Saved registers for kernel context switches.
 struct context {
@@ -25,6 +27,13 @@ struct context {
 	uint64 s11;
 };
 
+typedef enum {
+	UnInit,
+	Ready,
+	Running,
+	Exited,
+} TaskStatus;
+
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
@@ -37,12 +46,21 @@ struct proc {
 	struct context context; // swtch() here to run process
 	/*
 	* LAB1: you may need to add some new fields here
+	* Done
 	*/
+	unsigned int syscall_times[MAX_SYSCALL_NUM]; //How many times each sys_call has been made
+	int start_time; //Start time of proc
 };
 
 /*
 * LAB1: you may need to define struct for TaskInfo here
+* Done
 */
+struct TaskInfo {
+	TaskStatus status;
+	unsigned int syscall_times[MAX_SYSCALL_NUM];
+	int time;
+};
 
 struct proc *curr_proc();
 void exit(int);
