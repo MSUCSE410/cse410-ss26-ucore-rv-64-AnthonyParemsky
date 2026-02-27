@@ -51,7 +51,6 @@ void push_queue(struct queue *q, int value, int stride)
 
 int pop_queue(struct queue *q)
 {
-
 	/*debug
 	printf("\nREADING QUEUE\n");
 	int i;
