@@ -132,7 +132,7 @@ uint64 sys_munmap(uint64 start,uint64 len)
 {
 	if(len == 0)
 	{
-		return 0;
+		return -1;
 	}
 
 	if(start % PGSIZE)
