@@ -113,6 +113,7 @@ struct inode *ialloc(uint dev, short type)
 		dip = (struct dinode *)bp->data + inum % IPB;
 		if (dip->type == 0) { // a free inode
 			memset(dip, 0, sizeof(*dip));
+			dip->pad[0] = 1; //link count as pad[0]
 			dip->type = type;
 			bwrite(bp);
 			brelse(bp);
@@ -136,7 +137,10 @@ void iupdate(struct inode *ip)
 	dip = (struct dinode *)bp->data + ip->inum % IPB;
 	dip->type = ip->type;
 	dip->size = ip->size;
-	// LAB4: you may need to update link count here
+
+	// LAB4: you may need to update link count here DONE
+	dip->pad[0] = ip->nlink;
+
 	memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
 	bwrite(bp);
 	brelse(bp);
@@ -189,7 +193,10 @@ void ivalid(struct inode *ip)
 		dip = (struct dinode *)bp->data + ip->inum % IPB;
 		ip->type = dip->type;
 		ip->size = dip->size;
-		// LAB4: You may need to get lint count here
+
+		// LAB4: You may need to get lint count here DONE
+		ip->nlink = dip->pad[0];
+
 		memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
 		brelse(bp);
 		ip->valid = 1;
@@ -207,8 +214,13 @@ void ivalid(struct inode *ip)
 // case it has to free the inode.
 void iput(struct inode *ip)
 {
-	// LAB4: Unmark the condition and change link count variable name (nlink) if needed
-	if (ip->ref == 1 && ip->valid && 0 /*&& ip->nlink == 0*/) {
+	// LAB4: Unmark the condition and change link count variable name (nlink) if needed DONE
+	/*
+	errorf("%d",ip->nlink);
+	errorf("ref %d",ip->ref);
+	*/
+	if (ip->ref == 1 && ip->valid && ip->nlink == 0) {
+		//errorf("FREE");
 		// inode has no links and no other references: truncate and free.
 		itrunc(ip);
 		ip->type = 0;
@@ -408,9 +420,11 @@ int dirlink(struct inode *dp, char *name, uint inum)
 	int off;
 	struct dirent de;
 	struct inode *ip;
+	//errorf("IP: %d\n",dirlookup(dp,name,0));
 	// Check that name is not present.
 	if ((ip = dirlookup(dp, name, 0)) != 0) {
 		iput(ip);
+		//errorf("Present\n");
 		return -1;
 	}
 
@@ -425,10 +439,35 @@ int dirlink(struct inode *dp, char *name, uint inum)
 	de.inum = inum;
 	if (writei(dp, 0, (uint64)&de, off, sizeof(de)) != sizeof(de))
 		panic("dirlink");
+	//errorf("IP2: %d\n",dirlookup(dp,name,0));
+	//ip->nlink += 1;
 	return 0;
 }
 
 // LAB4: You may want to add dirunlink here
+// Remove a directory entry (name, inum) from the directory dp.
+int dirunlink(struct inode *dp, char *name, uint inum)
+{
+	uint off;
+	struct dirent de;
+	struct inode *ip;
+	// Check that name is not present.
+	if ((ip = dirlookup(dp, name, &off)) == 0) {
+		return -1;
+	}
+	iput(ip);
+	//blank entry
+	memset(de.name,0,DIRSIZ);
+	de.inum = 0;
+	//remove entry (overwrite)
+	if (writei(dp, 0, (uint64)&de, off, sizeof(de)) != sizeof(de))
+		panic("dirlink");
+	ivalid(ip);
+	ip->nlink -= 1;
+	iupdate(ip);
+	iput(ip);
+	return 0;
+}
 
 //Return the inode of the root directory
 struct inode *root_dir()

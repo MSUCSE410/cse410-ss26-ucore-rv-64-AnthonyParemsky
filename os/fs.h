@@ -72,11 +72,20 @@ struct dirent {
 	char name[DIRSIZ];
 };
 
+struct Stat {
+	uint64 dev;
+	uint64 ino;
+	uint32 mode;
+	uint32 nlink;
+	uint64 pad[7];
+};
+
 // file.h
 struct inode;
 
 void fsinit();
 int dirlink(struct inode *, char *, uint);
+int dirunlink(struct inode *, char *, uint);
 struct inode *dirlookup(struct inode *, char *, uint *);
 struct inode *ialloc(uint, short);
 struct inode *idup(struct inode *);

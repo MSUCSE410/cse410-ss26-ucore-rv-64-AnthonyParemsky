@@ -4,6 +4,7 @@
 #include "trap.h"
 #include "vm.h"
 #include "queue.h"
+#include "timer.h"
 
 struct proc pool[NPROC];
 __attribute__((aligned(16))) char kstack[NPROC][PAGE_SIZE];
@@ -37,6 +38,12 @@ void proc_init()
 		p->state = UNUSED;
 		p->kstack = (uint64)kstack[p - pool];
 		p->trapframe = (struct trapframe *)trapframe[p - pool];
+		p->start_time = -1;
+		memset(p->syscall_times,0,MAX_SYSCALL_NUM);
+		//Stride scheduling init
+		p->stride = 0;
+		p->prio = 16;
+		p->pass = BIG_STRIDE/p->prio;
 	}
 	idle.kstack = (uint64)boot_stack_top;
 	idle.pid = IDLE_PID;
@@ -64,7 +71,7 @@ struct proc *fetch_task()
 
 void add_task(struct proc *p)
 {
-	push_queue(&task_queue, p - pool);
+	push_queue(&task_queue, p - pool,p->stride);
 	debugf("add task %d(pid=%d) to task queue\n", p - pool, p->pid);
 }
 
@@ -125,6 +132,12 @@ void scheduler()
 				has_proc = 1;
 				tracef("swtich to proc %d", p - pool);
 				p->state = RUNNING;
+
+				if(p->start_time == -1)
+				{
+					p->start_time = (get_cycle() * 1000) / CPU_FREQ; //ms
+				}
+
 				current_proc = p;
 				swtch(&idle.context, &p->context);
 			}
@@ -137,6 +150,8 @@ void scheduler()
 			panic("all app are over!\n");
 		}
 		tracef("swtich to proc %d", p - pool);
+		p->pass = BIG_STRIDE / p->prio;
+		p->stride += p->pass;
 		p->state = RUNNING;
 		current_proc = p;
 		swtch(&idle.context, &p->context);

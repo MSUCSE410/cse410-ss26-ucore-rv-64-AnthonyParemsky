@@ -28,4 +28,11 @@
 #define IDLE_PID (0)
 #define MAX_ARG_NUM (32) // max exec arguments
 
+#define INT_MAX 0x7fffffff
+
+/*
+#define DIR 0x040000
+#define FILE 0x100000
+*/
+
 #endif // CONST_H

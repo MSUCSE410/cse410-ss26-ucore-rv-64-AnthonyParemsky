@@ -50,6 +50,15 @@ struct dinode {
 	uint addrs[NDIRECT + 1]; // Data block addresses
 };
 
+struct Stat {
+	uint64 dev;
+	uint64 ino;
+	uint32 mode;
+	uint32 nlink;
+	uint64 pad[7];
+};
+
+
 // Inodes per block.
 #define IPB (BSIZE / sizeof(struct dinode))
 
