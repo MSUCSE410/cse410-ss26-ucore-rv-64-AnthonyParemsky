@@ -24,6 +24,7 @@ void mutex_lock(struct mutex *m)
 {
 	if (!m->locked) {
 		m->locked = 1;
+		m->tid = curr_thread()->tid;
 		debugf("lock a free mutex");
 		return;
 	}
@@ -33,6 +34,7 @@ void mutex_lock(struct mutex *m)
 		while (m->locked) {
 			yield();
 		}
+		m->tid = curr_thread()->tid;
 		debugf("lock spin mutex after some trials");
 		return;
 	}
@@ -59,6 +61,7 @@ void mutex_unlock(struct mutex *m)
 			// Or we should give lock to next thread
 			t->state = RUNNABLE;
 			add_task(t);
+			m->tid = curr_thread()->tid;
 			debugf("blocking mutex passed to thread %d", t->tid);
 		}
 	} else {
@@ -80,9 +83,10 @@ struct semaphore *semaphore_create(int count)
 	return s;
 }
 
-void semaphore_up(struct semaphore *s)
+int semaphore_up(struct semaphore *s)
 {
 	s->count++;
+	int ret = -1;
 	if (s->count <= 0) {
 		// count <= 0 after up means wait queue not empty
 		struct thread *t = id_to_task(pop_queue(&s->wait_queue));
@@ -91,9 +95,11 @@ void semaphore_up(struct semaphore *s)
 		}
 		t->state = RUNNABLE;
 		add_task(t);
+		ret = t->tid;
 		debugf("semaphore up and notify another task");
 	}
 	debugf("semaphore up from %d to %d", s->count - 1, s->count);
+	return ret;
 }
 
 void semaphore_down(struct semaphore *s)
