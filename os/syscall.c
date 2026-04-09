@@ -413,6 +413,7 @@ int sys_mutex_unlock(int mutex_id)
 	if(curr_proc()->mutex_pool[mutex_id].locked)
 	{
 		curr_proc()->allocation_mutex[(curr_proc()->mutex_pool[mutex_id].tid)*LOCK_POOL_SIZE + mutex_id] += 1; //add to new
+		curr_proc()->demand_mutex[(curr_proc()->mutex_pool[mutex_id].tid)*LOCK_POOL_SIZE + mutex_id] -= 1; //remove demand
 	}
 	else
 	{
